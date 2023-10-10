@@ -41,8 +41,9 @@ func main() {
 		//AllowHeader：业务请求中可以带上的头。
 		//AllowOriginFunc：哪些来源是允许的。
 		//AllowMethods:     []string{"POST", "GET"},
-		AllowHeaders: []string{"Content-Type", "Authorization"},
-		//ExposeHeaders: []string{"x-jwt-token"},
+		AllowHeaders:  []string{"Content-Type", "Authorization"},
+		ExposeHeaders: []string{"x-jwt-token"}, // 带上这个前端才能拿到x-jwt-token 前端拿到token后一般放在Authorization Bearer里
+
 		AllowCredentials: true,
 		AllowOriginFunc: func(origin string) bool {
 			if strings.HasPrefix(origin, "http://localhost") {
@@ -65,7 +66,13 @@ func main() {
 	// sessions的使用，
 
 	// 校验登录 有些请求路径需要忽略 不经过校验 比如/users/login
-	server.Use(middleware.NewLoginMiddlewareBuilder().
+	//server.Use(middleware.NewLoginMiddlewareBuilder().
+	//	IgnorePaths("/users/login").
+	//	IgnorePaths("/users/signup").
+	//	Build())
+
+	// jwt登录校验
+	server.Use(middleware.NewLoginJWTMiddlewareBuilder().
 		IgnorePaths("/users/login").
 		IgnorePaths("/users/signup").
 		Build())

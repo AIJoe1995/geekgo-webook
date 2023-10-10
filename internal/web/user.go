@@ -7,6 +7,7 @@ import (
 	regexp "github.com/dlclark/regexp2"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
+	jwt "github.com/golang-jwt/jwt/v5"
 	"net/http"
 )
 
@@ -38,7 +39,8 @@ func (u *UserHandler) RegisterRoutes(server *gin.Engine) {
 	// type HandlerFunc func(*Context)
 	ug.GET("/profile", u.Profile)
 	ug.POST("/signup", u.SignUp)
-	ug.POST("/login", u.Login)
+	//ug.POST("/login", u.Login)
+	ug.POST("/login", u.LoginJWT)
 	ug.POST("/edit", u.Edit)
 	ug.GET("/logout", u.Logout)
 }
@@ -107,6 +109,45 @@ func (u *UserHandler) SignUp(ctx *gin.Context) {
 
 	// todo 注册成功后 应该转去登录页面 或者 注册成功后直接设置成登录态
 
+}
+
+func (u *UserHandler) LoginJWT(ctx *gin.Context) {
+	// login 从前端接收 email password 和数据库中的进行比对
+	type Req struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}
+	var req Req
+	err := ctx.Bind(req)
+	if err != nil {
+		//Bind不成功会400
+		return
+	}
+	// 接下来要和数据库里面的比对 调用repository层的方法 进行登录 登录成功之后 需要在服务器记录session
+	// 调用Service的SignUp方法
+	user, err := u.svc.Login(ctx, req.Email, req.Password)
+	if err == service.ErrInvalidUserOrPassword {
+		ctx.String(http.StatusOK, "用户名或密码不对")
+		return
+	}
+	if err != nil {
+		ctx.String(http.StatusOK, "系统错误")
+		return
+	}
+	fmt.Printf("%v", user)
+	// todo 登录成功之后 创建jwt 使用jwt保持登录态 在middleware login_jwt.go中做jwt的登录态校验
+	// jwt tokenstring 包含Header(加密算法) Payload(数据) Signature(签名)
+	// 参考教程 https://pkg.go.dev/github.com/golang-jwt/jwt#example-New-Hmac
+	token := jwt.New(jwt.SigningMethodHS512)
+	tokenStr, err := token.SignedString([]byte("95osj3fUD7fo0mlYdDbncXz4VD2igvf0"))
+	if err != nil {
+		ctx.String(http.StatusInternalServerError, "系统错误")
+		return
+	}
+	ctx.Header("x-jwt-token", tokenStr)
+	fmt.Println(user)
+	ctx.String(http.StatusOK, "登录成功")
+	return
 }
 
 func (u *UserHandler) Login(ctx *gin.Context) {
