@@ -137,6 +137,12 @@ func (u *UserHandler) Login(ctx *gin.Context) {
 	// 我可以随便设置值了
 	// 你要放在 session 里面的值
 	sess.Set("userId", user.Id)
+	// 设置session参数  之后在登录校验中间件中添加session的刷新机制
+	sess.Options(sessions.Options{
+		Secure:   true, // 只能用Https协议
+		HttpOnly: true, //
+		MaxAge:   60,
+	})
 	sess.Save()
 	ctx.String(http.StatusOK, "登录成功")
 	return
