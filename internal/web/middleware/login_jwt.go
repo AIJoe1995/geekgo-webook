@@ -68,6 +68,13 @@ func (l *LoginJWTMiddlewareBuilder) Build() gin.HandlerFunc {
 			ctx.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}
+		// jwt保存了user-agent 对比现在这个请求和登录时候的是不是同一个useragent发送的
+		if claims.UserAgent != ctx.Request.UserAgent() {
+			// 严重的安全问题
+			// 你是要监控
+			ctx.AbortWithStatus(http.StatusUnauthorized)
+			return
+		}
 
 		// 刷新jwt token
 		now := time.Now()
@@ -80,6 +87,7 @@ func (l *LoginJWTMiddlewareBuilder) Build() gin.HandlerFunc {
 			}
 			ctx.Header("x-jwt-token", tokenStr)
 		}
-
+		ctx.Set("claims", claims) //??
+		//ctx.Set("userId", claims.Uid)
 	}
 }

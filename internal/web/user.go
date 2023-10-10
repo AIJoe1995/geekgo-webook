@@ -145,6 +145,7 @@ func (u *UserHandler) LoginJWT(ctx *gin.Context) {
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute)),
 		},
+		UserAgent: ctx.Request.UserAgent(),
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS512, claims)
 	tokenStr, err := token.SignedString([]byte("95osj3fUD7fo0mlYdDbncXz4VD2igvf0"))
@@ -219,5 +220,6 @@ func (u *UserHandler) Edit(ctx *gin.Context) {
 type UserClaims struct {
 	jwt.RegisteredClaims // 组合了这个就实现了jwt Claims接口的所有方法
 	// 接下来定义自己想放入claims的数据
-	Uid int64
+	Uid       int64
+	UserAgent string
 }
