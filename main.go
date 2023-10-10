@@ -5,13 +5,13 @@ import (
 	"geekgo-webook/internal/repository/dao"
 	"geekgo-webook/internal/service"
 	"geekgo-webook/internal/web"
+	"geekgo-webook/internal/web/middleware"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/redis"
 	"github.com/gin-gonic/gin"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
-	"net/http"
 	"strings"
 	"time"
 )
@@ -65,17 +65,7 @@ func main() {
 	// sessions的使用，
 
 	// 校验登录 有些请求路径需要忽略 不经过校验 比如/users/login
-	server.Use(func(ctx *gin.Context) {
-		if ctx.Request.URL.Path == "/users/login" || ctx.Request.URL.Path == "/users/signup" {
-			return
-		}
-		sess := sessions.Default(ctx)
-		id := sess.Get("userId")
-		if id == nil {
-			ctx.AbortWithStatus(http.StatusUnauthorized)
-			return
-		}
-	})
+	server.Use(middleware.NewLoginMiddlewareBuilder().Build())
 
 	db := initDB()
 	dao := dao.NewUserDAO(db)
