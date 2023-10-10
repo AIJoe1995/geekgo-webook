@@ -65,7 +65,10 @@ func main() {
 	// sessions的使用，
 
 	// 校验登录 有些请求路径需要忽略 不经过校验 比如/users/login
-	server.Use(middleware.NewLoginMiddlewareBuilder().Build())
+	server.Use(middleware.NewLoginMiddlewareBuilder().
+		IgnorePaths("/users/login").
+		IgnorePaths("/users/signup").
+		Build())
 
 	db := initDB()
 	dao := dao.NewUserDAO(db)
