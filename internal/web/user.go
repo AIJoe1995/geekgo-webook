@@ -9,6 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 	jwt "github.com/golang-jwt/jwt/v5"
 	"net/http"
+	"time"
 )
 
 type UserHandler struct {
@@ -138,7 +139,14 @@ func (u *UserHandler) LoginJWT(ctx *gin.Context) {
 	// todo 登录成功之后 创建jwt 使用jwt保持登录态 在middleware login_jwt.go中做jwt的登录态校验
 	// jwt tokenstring 包含Header(加密算法) Payload(数据) Signature(签名)
 	// 参考教程 https://pkg.go.dev/github.com/golang-jwt/jwt#example-New-Hmac
-	token := jwt.New(jwt.SigningMethodHS512)
+	//token := jwt.New(jwt.SigningMethodHS512)
+	claims := UserClaims{
+		Uid: user.Id,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute)),
+		},
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS512, claims)
 	tokenStr, err := token.SignedString([]byte("95osj3fUD7fo0mlYdDbncXz4VD2igvf0"))
 	if err != nil {
 		ctx.String(http.StatusInternalServerError, "系统错误")
@@ -206,4 +214,10 @@ func (u *UserHandler) Logout(ctx *gin.Context) {
 
 func (u *UserHandler) Edit(ctx *gin.Context) {
 	//
+}
+
+type UserClaims struct {
+	jwt.RegisteredClaims // 组合了这个就实现了jwt Claims接口的所有方法
+	// 接下来定义自己想放入claims的数据
+	Uid int64
 }
