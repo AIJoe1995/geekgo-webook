@@ -6,10 +6,12 @@ import (
 	"geekgo-webook/internal/service"
 	"geekgo-webook/internal/web"
 	"github.com/gin-contrib/cors"
+	"github.com/gin-contrib/sessions"
+	"github.com/gin-contrib/sessions/redis"
 	"github.com/gin-gonic/gin"
-
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
+	"net/http"
 	"strings"
 	"time"
 )
@@ -52,11 +54,34 @@ func main() {
 		},
 		MaxAge: 12 * time.Hour,
 	}))
+
+	// 使用session middleware 可以提取session 使用session处理登录态的问题 在登陆成功之后把session保存起来 然后再设置登录校验的middleware来校验session
+	// 代码示例 https://github.com/gin-contrib/sessions
+	store, _ := redis.NewStore(10, "tcp", "localhost:6379", "", []byte("secret"))
+	server.Use(sessions.Sessions("mysession", store)) // middleware每次请求都会走这里，
+	// sessions.Sessions返回的是HandlerFunc 会创建一个session结构体
+	// s := &session{name, c.Request, store, nil, false, c.Writer}
+	//		c.Set(DefaultKey, s) c是gin.Context
+	// sessions的使用，
+
+	// 校验登录 有些请求路径需要忽略 不经过校验 比如/users/login
+	server.Use(func(ctx *gin.Context) {
+		if ctx.Request.URL.Path == "/users/login" || ctx.Request.URL.Path == "/users/signup" {
+			return
+		}
+		sess := sessions.Default(ctx)
+		id := sess.Get("userId")
+		if id == nil {
+			ctx.AbortWithStatus(http.StatusUnauthorized)
+			return
+		}
+	})
+
 	db := initDB()
 	dao := dao.NewUserDAO(db)
 	repo := repository.NewUserRepository(dao)
 	svc := service.NewUserService(repo)
-	// todo New dao repo service 传svc到NewUserHandler
+
 	u := web.NewUserHandler(svc)
 	// server 处理GET请求 GET is a shortcut for router.Handle("GET", path, handlers)
 	//server.GET(relativePath, HandlerFunc) 对于给定的请求路径，以HandlerFunc来处理请求返回响应

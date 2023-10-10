@@ -5,6 +5,7 @@ import (
 	"geekgo-webook/internal/domain"
 	"geekgo-webook/internal/service"
 	regexp "github.com/dlclark/regexp2"
+	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"net/http"
 )
@@ -132,6 +133,13 @@ func (u *UserHandler) Login(ctx *gin.Context) {
 	}
 	fmt.Printf("%v", user)
 	// todo 登录成功之后 需要设置session 保持登录态
+	sess := sessions.Default(ctx) // 返回Session interface Session具有 Get Set Delete Save等方法
+	// 我可以随便设置值了
+	// 你要放在 session 里面的值
+	sess.Set("userId", user.Id)
+	sess.Save()
+	ctx.String(http.StatusOK, "登录成功")
+	return
 
 }
 
