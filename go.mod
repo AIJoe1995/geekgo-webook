@@ -10,6 +10,8 @@ require (
 	github.com/go-sql-driver/mysql v1.7.1
 	github.com/golang-jwt/jwt/v5 v5.0.0
 	github.com/redis/go-redis/v9 v9.2.1
+	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.0.763
+	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/sms v1.0.763
 	golang.org/x/crypto v0.9.0
 	gorm.io/driver/mysql v1.5.1
 	gorm.io/gorm v1.25.4
