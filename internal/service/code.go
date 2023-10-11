@@ -21,6 +21,13 @@ type CodeService struct {
 	smsSvc sms.Service                // 需要短信服务 发送验证码
 }
 
+func NewCodeService(repo *repository.CodeRepository, smsSvc sms.Service) *CodeService {
+	return &CodeService{
+		repo:   repo,
+		smsSvc: smsSvc,
+	}
+}
+
 func (svc *CodeService) Send(ctx context.Context, biz string, phone string) error {
 	code := svc.generateCode()
 	err := svc.repo.Store(ctx, biz, phone, code)

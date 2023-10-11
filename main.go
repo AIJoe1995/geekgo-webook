@@ -5,6 +5,7 @@ import (
 	"geekgo-webook/internal/repository/cache"
 	"geekgo-webook/internal/repository/dao"
 	"geekgo-webook/internal/service"
+	"geekgo-webook/internal/service/sms/memory"
 	"geekgo-webook/internal/web"
 	"geekgo-webook/internal/web/middleware"
 	"github.com/gin-contrib/cors"
@@ -40,6 +41,11 @@ func initRedis() redis.Cmdable {
 }
 
 func main() {
+	server := InitWebServer()
+	server.Run(":8080")
+}
+
+func oldmain() {
 	server := gin.Default()
 	// 解决跨域问题 使用gin middleware server.Use(HandlerFunc)将HandlerFunc作用于全部路由
 	server.Use(cors.New(cors.Config{
@@ -88,11 +94,14 @@ func main() {
 	db := initDB()
 	dao := dao.NewUserDAO(db)
 	client := initRedis()
-	cache := cache.NewUserCache(client)
-	repo := repository.NewUserRepository(dao, cache)
+	usercache := cache.NewUserCache(client)
+	repo := repository.NewUserRepository(dao, usercache)
 	svc := service.NewUserService(repo)
-
-	u := web.NewUserHandler(svc)
+	smssvc := memory.NewService()
+	codecache := cache.NewCodeCache(client)
+	coderepo := repository.NewCodeRepository(codecache)
+	codesvc := service.NewCodeService(coderepo, smssvc)
+	u := web.NewUserHandler(svc, codesvc)
 	// server 处理GET请求 GET is a shortcut for router.Handle("GET", path, handlers)
 	//server.GET(relativePath, HandlerFunc) 对于给定的请求路径，以HandlerFunc来处理请求返回响应
 	// 示例 gin还有参数路由 通配符路由等

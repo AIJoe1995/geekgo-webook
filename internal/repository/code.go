@@ -15,6 +15,12 @@ type CodeRepository struct {
 	cache *cache.CodeCache
 }
 
+func NewCodeRepository(cache *cache.CodeCache) *CodeRepository {
+	return &CodeRepository{
+		cache: cache,
+	}
+}
+
 func (repo *CodeRepository) Store(ctx context.Context, biz, phone, code string) error {
 	// 调用cache的Store方法
 	return repo.cache.Set(ctx, biz, phone, code)
