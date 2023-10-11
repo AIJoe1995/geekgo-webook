@@ -2,6 +2,7 @@ package main
 
 import (
 	"geekgo-webook/internal/repository"
+	"geekgo-webook/internal/repository/cache"
 	"geekgo-webook/internal/repository/dao"
 	"geekgo-webook/internal/service"
 	"geekgo-webook/internal/web"
@@ -79,7 +80,9 @@ func main() {
 
 	db := initDB()
 	dao := dao.NewUserDAO(db)
-	repo := repository.NewUserRepository(dao)
+	//client :=
+	cache := cache.NewUserCache(client)
+	repo := repository.NewUserRepository(dao, cache)
 	svc := service.NewUserService(repo)
 
 	u := web.NewUserHandler(svc)

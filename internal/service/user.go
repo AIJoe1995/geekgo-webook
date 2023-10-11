@@ -34,6 +34,11 @@ func (svc *UserService) SignUp(ctx context.Context, u domain.User) error {
 	return svc.repo.Create(ctx, u)
 }
 
+func (svc *UserService) Profile(ctx context.Context, uid int64) (domain.User, error) {
+	u, err := svc.repo.FindById(ctx, uid)
+	return u, err
+}
+
 func (svc *UserService) Login(ctx context.Context, email, password string) (domain.User, error) {
 	// 需要从数据库中找到用户 （mysql 或 redis ) 通过repo进行接口封装
 	u, err := svc.repo.FindByEmail(ctx, email)

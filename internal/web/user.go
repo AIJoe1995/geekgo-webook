@@ -38,7 +38,8 @@ func NewUserHandler(svc *service.UserService) *UserHandler {
 func (u *UserHandler) RegisterRoutes(server *gin.Engine) {
 	ug := server.Group("/users") // Group creates a new router group
 	// type HandlerFunc func(*Context)
-	ug.GET("/profile", u.Profile)
+	//ug.GET("/profile", u.Profile)
+	ug.GET("/profile", u.ProfileJWT)
 	ug.POST("/signup", u.SignUp)
 	//ug.POST("/login", u.Login)
 	ug.POST("/login", u.LoginJWT)
@@ -47,9 +48,25 @@ func (u *UserHandler) RegisterRoutes(server *gin.Engine) {
 }
 
 func (u *UserHandler) Profile(ctx *gin.Context) {
-	// profile 包括 Nickname ... 可以把数据放在结构体里 用ctx.JSON 来JSON化传给前端
-	type Profile struct {
+
+}
+
+func (u *UserHandler) ProfileJWT(ctx *gin.Context) {
+	// 从前端传来的ctx里 拿到jwt claims 从里面拿到userId
+	// 数据库或缓存中查找user（具体实现交给repo） ctx.JSON JSON化结构体
+	c, ok := ctx.Get("claims") // return value any bool
+	if !ok {
+		ctx.String(http.StatusOK, "系统错误")
+		return
 	}
+	claims, ok := c.(*UserClaims)
+	id := claims.Uid
+	user, err := u.svc.Profile(ctx, id) // 没有这个id怎么办 应该都是检查过登录态才能进到这里 正常应该有id
+	if err != nil {
+		ctx.String(http.StatusOK, "系统错误")
+		return
+	}
+	ctx.JSON(http.StatusOK, user)
 }
 
 func (u *UserHandler) SignUp(ctx *gin.Context) {
