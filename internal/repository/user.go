@@ -19,6 +19,7 @@ type UserRepository interface {
 	FindByPhone(ctx context.Context, phone string) (domain.User, error)
 	FindById(ctx context.Context, uid int64) (domain.User, error)
 	FindByEmail(ctx context.Context, email string) (domain.User, error)
+	FindByWechat(ctx context.Context, openID string) (domain.User, error)
 }
 
 ////cannot use dao (variable of type dao.UserDAO) as *dao.GORMUserDAO value in argument to reposit
@@ -46,6 +47,14 @@ func (repo *userRepository) Create(ctx context.Context, u domain.User) error {
 
 func (repo *userRepository) FindByPhone(ctx context.Context, phone string) (domain.User, error) {
 	u, err := repo.dao.FindByPhone(ctx, phone)
+	if err != nil {
+		return domain.User{}, err
+	}
+	return repo.entityToDomain(u), nil
+}
+
+func (repo *userRepository) FindByWechat(ctx context.Context, openID string) (domain.User, error) {
+	u, err := repo.dao.FindByWechat(ctx, openID)
 	if err != nil {
 		return domain.User{}, err
 	}

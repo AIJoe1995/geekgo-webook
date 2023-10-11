@@ -12,6 +12,7 @@ import (
 	"geekgo-webook/internal/repository/dao"
 	"geekgo-webook/internal/service"
 	"geekgo-webook/internal/web"
+	"geekgo-webook/internal/web/jwt"
 	"geekgo-webook/ioc"
 	"github.com/gin-gonic/gin"
 )
@@ -20,7 +21,8 @@ import (
 
 func InitWebServer() *gin.Engine {
 	cmdable := ioc.InitRedis()
-	v := ioc.InitGinMiddlewares(cmdable)
+	handler := jwt.NewRedisJWTHandler(cmdable)
+	v := ioc.InitGinMiddlewares(cmdable, handler)
 	db := ioc.InitDB()
 	userDAO := dao.NewUserDAO(db)
 	userCache := cache.NewUserCache(cmdable)
@@ -30,7 +32,10 @@ func InitWebServer() *gin.Engine {
 	codeRepository := repository.NewCodeRepository(codeCache)
 	smsService := ioc.InitSMSService()
 	codeService := service.NewCodeService(codeRepository, smsService)
-	userHandler := web.NewUserHandler(userService, codeService)
-	engine := ioc.InitGin(v, userHandler)
+	userHandler := web.NewUserHandler(userService, codeService, handler)
+	wechatService := ioc.InitWechatService()
+	wechatHandlerConfig := ioc.NewWechatHandlerConfig()
+	oAuth2WechatHandler := web.NewOAuth2WechatHandler(wechatService, userService, handler, wechatHandlerConfig)
+	engine := ioc.InitGin(v, userHandler, oAuth2WechatHandler)
 	return engine
 }

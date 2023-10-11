@@ -19,6 +19,7 @@ type UserService interface {
 	FindOrCreate(ctx context.Context, phone string) (domain.User, error)
 	Profile(ctx context.Context, uid int64) (domain.User, error)
 	Login(ctx context.Context, email, password string) (domain.User, error)
+	FindOrCreateByWechat(ctx context.Context, info domain.WechatInfo) (domain.User, error)
 }
 
 type userService struct {
@@ -29,6 +30,11 @@ func NewUserService(repo repository.UserRepository) UserService {
 	return &userService{
 		repo: repo,
 	}
+}
+
+func (svc *userService) FindOrCreateByWechat(ctx context.Context, info domain.WechatInfo) (domain.User, error) {
+	u, err := svc.repo.FindByWechat(ctx, info.OpenID)
+	return u, err
 }
 
 func (svc *userService) SignUp(ctx context.Context, u domain.User) error {

@@ -19,6 +19,7 @@ type UserDAO interface {
 	FindByPhone(ctx context.Context, phone string) (User, error)
 	FindById(ctx context.Context, id int64) (User, error)
 	FindByEmail(ctx context.Context, email string) (User, error)
+	FindByWechat(ctx context.Context, openID string) (User, error)
 }
 
 type GORMUserDAO struct {
@@ -54,6 +55,12 @@ func (dao *GORMUserDAO) Insert(ctx context.Context, u User) error {
 func (dao *GORMUserDAO) FindByPhone(ctx context.Context, phone string) (User, error) {
 	var u User
 	err := dao.db.WithContext(ctx).Where("phone = ?", phone).First(&u).Error
+	return u, err
+}
+
+func (dao *GORMUserDAO) FindByWechat(ctx context.Context, openID string) (User, error) {
+	var u User
+	err := dao.db.WithContext(ctx).Where("wechat_open_id = ?", openID).First(&u).Error
 	return u, err
 }
 
@@ -96,7 +103,9 @@ type User struct {
 
 	// 唯一索引允许有多个空值
 	// 但是不能有多个 ""
-	Phone sql.NullString `gorm:"unique"`
+	Phone         sql.NullString `gorm:"unique"`
+	WechatUnionID sql.NullString
+	WechatOpenID  sql.NullString `gorm:"unique"`
 	// 最大问题就是，你要解引用
 	// 你要判空
 	//Phone *string

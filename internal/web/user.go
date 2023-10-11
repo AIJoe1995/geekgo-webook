@@ -4,12 +4,11 @@ import (
 	"fmt"
 	"geekgo-webook/internal/domain"
 	"geekgo-webook/internal/service"
+	ijwt "geekgo-webook/internal/web/jwt"
 	regexp "github.com/dlclark/regexp2"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
-	jwt "github.com/golang-jwt/jwt/v5"
 	"net/http"
-	"time"
 )
 
 type UserHandler struct {
@@ -17,6 +16,7 @@ type UserHandler struct {
 	passwordExp *regexp.Regexp
 	svc         service.UserService
 	codeSvc     service.CodeService
+	ijwt.Handler
 }
 
 const biz = "login"
@@ -26,7 +26,7 @@ const (
 	passwordRegexPattern = `^(?=.*[A-Za-z])(?=.*\d)(?=.*[$@$!%*#?&])[A-Za-z\d$@$!%*#?&]{8,}$`
 )
 
-func NewUserHandler(svc service.UserService, codeSvc service.CodeService) *UserHandler {
+func NewUserHandler(svc service.UserService, codeSvc service.CodeService, jwtHdl ijwt.Handler) *UserHandler {
 	emailExp := regexp.MustCompile(emailRegexPattern, regexp.None)
 	passwordExp := regexp.MustCompile(passwordRegexPattern, regexp.None)
 
@@ -35,6 +35,7 @@ func NewUserHandler(svc service.UserService, codeSvc service.CodeService) *UserH
 		passwordExp: passwordExp,
 		svc:         svc,
 		codeSvc:     codeSvc,
+		Handler:     jwtHdl,
 	}
 }
 
@@ -47,10 +48,11 @@ func (u *UserHandler) RegisterRoutes(server *gin.Engine) {
 	ug.POST("/signup", u.SignUp)
 	//ug.POST("/login", u.Login)
 	ug.POST("/login", u.LoginJWT)
+	ug.POST("/logout", u.LogoutJWT)
 	ug.POST("/login_sms", u.LoginSMS)
 	ug.POST("/login_sms/code/send", u.SendLoginSMSCode)
 	ug.POST("/edit", u.Edit)
-	ug.GET("/logout", u.Logout)
+	//ug.GET("/logout", u.Logout)
 }
 
 func (u *UserHandler) Profile(ctx *gin.Context) {
@@ -65,7 +67,7 @@ func (u *UserHandler) ProfileJWT(ctx *gin.Context) {
 		ctx.String(http.StatusOK, "系统错误")
 		return
 	}
-	claims, ok := c.(*UserClaims)
+	claims, ok := c.(*ijwt.UserClaims)
 	id := claims.Uid
 	user, err := u.svc.Profile(ctx, id) // 没有这个id怎么办 应该都是检查过登录态才能进到这里 正常应该有id
 	if err != nil {
@@ -163,7 +165,7 @@ func (u *UserHandler) LoginJWT(ctx *gin.Context) {
 	// jwt tokenstring 包含Header(加密算法) Payload(数据) Signature(签名)
 	// 参考教程 https://pkg.go.dev/github.com/golang-jwt/jwt#example-New-Hmac
 	//token := jwt.New(jwt.SigningMethodHS512)
-	if err = u.setJWTToken(ctx, user.Id); err != nil {
+	if err = u.SetLoginToken(ctx, user.Id); err != nil {
 		ctx.String(http.StatusOK, "系统错误")
 		return
 	}
@@ -206,30 +208,12 @@ func (u *UserHandler) LoginSMS(ctx *gin.Context) {
 
 	// 这边要怎么办呢？
 	// 从哪来？
-	if err = u.setJWTToken(ctx, user.Id); err != nil {
+	if err = u.SetLoginToken(ctx, user.Id); err != nil {
 		ctx.String(http.StatusOK, "系统错误")
 		return
 	}
 	ctx.String(http.StatusOK, "验证码校验通过")
 
-}
-
-// 抽取出登录成功设置jwt
-func (u *UserHandler) setJWTToken(ctx *gin.Context, uid int64) error {
-	claims := UserClaims{
-		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute * 30)),
-		},
-		Uid:       uid,
-		UserAgent: ctx.Request.UserAgent(),
-	}
-	token := jwt.NewWithClaims(jwt.SigningMethodHS512, claims)
-	tokenStr, err := token.SignedString([]byte("95osj3fUD7fo0mlYdDbncXz4VD2igvf0"))
-	if err != nil {
-		return err
-	}
-	ctx.Header("x-jwt-token", tokenStr)
-	return nil
 }
 
 func (u *UserHandler) SendLoginSMSCode(ctx *gin.Context) {
@@ -312,13 +296,20 @@ func (u *UserHandler) Logout(ctx *gin.Context) {
 	ctx.String(http.StatusOK, "退出登录成功")
 }
 
-func (u *UserHandler) Edit(ctx *gin.Context) {
-	//
+func (u *UserHandler) LogoutJWT(ctx *gin.Context) {
+	err := u.ClearToken(ctx)
+	if err != nil {
+		ctx.JSON(http.StatusOK, Result{
+			Code: 5,
+			Msg:  "退出登录失败",
+		})
+		return
+	}
+	ctx.JSON(http.StatusOK, Result{
+		Msg: "退出登录OK",
+	})
 }
 
-type UserClaims struct {
-	jwt.RegisteredClaims // 组合了这个就实现了jwt Claims接口的所有方法
-	// 接下来定义自己想放入claims的数据
-	Uid       int64
-	UserAgent string
+func (u *UserHandler) Edit(ctx *gin.Context) {
+	//
 }

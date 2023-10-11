@@ -2,6 +2,7 @@ package ioc
 
 import (
 	"geekgo-webook/internal/web"
+	ijwt "geekgo-webook/internal/web/jwt"
 	"geekgo-webook/internal/web/middleware"
 	"geekgo-webook/pkg/ginx/middlewares/ratelimit"
 	"github.com/gin-contrib/cors"
@@ -11,21 +12,27 @@ import (
 	"time"
 )
 
-func InitGin(mdw []gin.HandlerFunc, userHdl *web.UserHandler) *gin.Engine {
+func InitGin(mdw []gin.HandlerFunc, userHdl *web.UserHandler, wechatHdl *web.OAuth2WechatHandler) *gin.Engine {
 	server := gin.Default()
 	server.Use(mdw...)
 	userHdl.RegisterRoutes(server)
+	wechatHdl.RegisterRoutes(server)
 	return server
 }
 
-func InitGinMiddlewares(redisClient redis.Cmdable) []gin.HandlerFunc {
+func InitGinMiddlewares(redisClient redis.Cmdable, jwtHdl ijwt.Handler) []gin.HandlerFunc {
 	return []gin.HandlerFunc{
 		corsHdl(),
-		middleware.NewLoginJWTMiddlewareBuilder().
+		middleware.NewLoginJWTMiddlewareBuilder(jwtHdl).
 			IgnorePaths("/users/signup").
 			IgnorePaths("/users/login_sms/code/send").
 			IgnorePaths("/users/login_sms").
-			IgnorePaths("/users/login").Build(),
+			IgnorePaths("/users/login").
+			IgnorePaths("/users/login").
+			IgnorePaths("/users/refresh_token").
+			IgnorePaths("/oauth2/wechat/authurl").
+			IgnorePaths("/oauth2/wechat/callback").
+			Build(),
 		ratelimit.NewBuilder(redisClient, time.Second, 100).Build(),
 	}
 

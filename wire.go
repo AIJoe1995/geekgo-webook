@@ -8,6 +8,7 @@ import (
 	"geekgo-webook/internal/repository/dao"
 	"geekgo-webook/internal/service"
 	"geekgo-webook/internal/web"
+	ijwt "geekgo-webook/internal/web/jwt"
 	"geekgo-webook/ioc"
 	"github.com/gin-gonic/gin"
 	"github.com/google/wire"
@@ -33,6 +34,10 @@ func InitWebServer() *gin.Engine {
 		web.NewUserHandler,
 		ioc.InitGin,
 		ioc.InitGinMiddlewares,
+		ijwt.NewRedisJWTHandler,
+		ioc.InitWechatService,
+		ioc.NewWechatHandlerConfig,
+		web.NewOAuth2WechatHandler,
 	)
 	return new(gin.Engine)
 }
