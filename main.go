@@ -40,6 +40,9 @@ func initRedis() redis.Cmdable {
 	return redisClient
 }
 
+// 修改为面向接口编程， 从dao->repository->service->web 逐层修改， A调用B 那么B应该是接口，dao是最底层被调用，从dao开始修改
+// 把各层的struct 先抽象出接口 然后NewStruct的时候 要返回接口，重新wire
+
 func main() {
 	server := InitWebServer()
 	server.Run(":8080")

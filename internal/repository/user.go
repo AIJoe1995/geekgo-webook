@@ -14,23 +14,37 @@ var (
 	ErrUserNotFound       = dao.ErrUserNotFound
 )
 
-type UserRepository struct {
-	dao   *dao.UserDAO
-	cache *cache.UserCache
+type UserRepository interface {
+	Create(ctx context.Context, u domain.User) error
+	FindByPhone(ctx context.Context, phone string) (domain.User, error)
+	FindById(ctx context.Context, uid int64) (domain.User, error)
+	FindByEmail(ctx context.Context, email string) (domain.User, error)
 }
 
-func NewUserRepository(dao *dao.UserDAO, cache *cache.UserCache) *UserRepository {
-	return &UserRepository{
+////cannot use dao (variable of type dao.UserDAO) as *dao.GORMUserDAO value in argument to reposit
+////ory.NewUserRepository: need type assertion
+//type userRepository struct {
+//	dao   *dao.GORMUserDAO
+//	cache *cache.RedisUserCache
+//}
+
+type userRepository struct {
+	dao   dao.UserDAO
+	cache cache.UserCache
+}
+
+func NewUserRepository(dao dao.UserDAO, cache cache.UserCache) UserRepository {
+	return &userRepository{
 		dao:   dao,
 		cache: cache,
 	}
 }
 
-func (repo *UserRepository) Create(ctx context.Context, u domain.User) error {
+func (repo *userRepository) Create(ctx context.Context, u domain.User) error {
 	return repo.dao.Insert(ctx, repo.domainToEntity(u))
 }
 
-func (repo *UserRepository) FindByPhone(ctx context.Context, phone string) (domain.User, error) {
+func (repo *userRepository) FindByPhone(ctx context.Context, phone string) (domain.User, error) {
 	u, err := repo.dao.FindByPhone(ctx, phone)
 	if err != nil {
 		return domain.User{}, err
@@ -38,7 +52,7 @@ func (repo *UserRepository) FindByPhone(ctx context.Context, phone string) (doma
 	return repo.entityToDomain(u), nil
 }
 
-func (repo *UserRepository) FindById(ctx context.Context, uid int64) (domain.User, error) {
+func (repo *userRepository) FindById(ctx context.Context, uid int64) (domain.User, error) {
 	// repository 先从缓存查找 缓存没有查找数据库并写回缓存
 	u, err := repo.cache.Get(ctx, uid)
 	if err == nil {
@@ -62,7 +76,7 @@ func (repo *UserRepository) FindById(ctx context.Context, uid int64) (domain.Use
 }
 
 // FindById  只有缓存中没找到数据的时候才去数据库查找 避免缓存崩溃 大量请求发到数据库
-func (repo *UserRepository) FindByIdV1(ctx context.Context, uid int64) (domain.User, error) {
+func (repo *userRepository) FindByIdV1(ctx context.Context, uid int64) (domain.User, error) {
 	u, err := repo.cache.Get(ctx, uid)
 	switch err {
 	case nil:
@@ -88,7 +102,7 @@ func (repo *UserRepository) FindByIdV1(ctx context.Context, uid int64) (domain.U
 	}
 }
 
-func (repo *UserRepository) FindByEmail(ctx context.Context, email string) (domain.User, error) {
+func (repo *userRepository) FindByEmail(ctx context.Context, email string) (domain.User, error) {
 	// repo 交给dao层去寻找用户
 	u, err := repo.dao.FindByEmail(ctx, email)
 	// dao 层返回的是dao.User{} 应该装换成domain.User实体
@@ -98,7 +112,7 @@ func (repo *UserRepository) FindByEmail(ctx context.Context, email string) (doma
 	return repo.entityToDomain(u), nil
 }
 
-func (repo *UserRepository) entityToDomain(u dao.User) domain.User {
+func (repo *userRepository) entityToDomain(u dao.User) domain.User {
 	return domain.User{
 		Id:       u.Id,
 		Email:    u.Email.String,
@@ -108,7 +122,7 @@ func (repo *UserRepository) entityToDomain(u dao.User) domain.User {
 	}
 }
 
-func (repo *UserRepository) domainToEntity(u domain.User) dao.User {
+func (repo *userRepository) domainToEntity(u domain.User) dao.User {
 	return dao.User{
 		Id: u.Id,
 		Email: sql.NullString{
