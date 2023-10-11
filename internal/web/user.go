@@ -16,7 +16,10 @@ type UserHandler struct {
 	emailExp    *regexp.Regexp
 	passwordExp *regexp.Regexp
 	svc         *service.UserService
+	codeSvc *service.CodeService
 }
+
+const biz = "login"
 
 const (
 	emailRegexPattern    = "^\\w+([-+.]\\w+)*@\\w+([-.]\\w+)*\\.\\w+([-.]\\w+)*$"
@@ -43,6 +46,7 @@ func (u *UserHandler) RegisterRoutes(server *gin.Engine) {
 	ug.POST("/signup", u.SignUp)
 	//ug.POST("/login", u.Login)
 	ug.POST("/login", u.LoginJWT)
+	ug.POST("/login_sms", u.LoginSMS)
 	ug.POST("/edit", u.Edit)
 	ug.GET("/logout", u.Logout)
 }
@@ -174,6 +178,39 @@ func (u *UserHandler) LoginJWT(ctx *gin.Context) {
 	fmt.Println(user)
 	ctx.String(http.StatusOK, "登录成功")
 	return
+}
+
+func (u *UserHandler) LoginSMS(ctx *gin.Context) {
+	// 接收手机号和验证码
+	type Req struct {
+		Phone string `json:"phone"`
+		Code  string `json:"code"`
+	}
+	var req Req
+	err := ctx.Bind(&req)
+	if err != nil {
+		return
+	}
+	// Verify 验证验证码 逻辑 过期时间 验证不成功 重试次数 验证成功删除
+	// 调用验证码服务的Verify功能
+	//ok, err := u.codeSvc.Verify(ctx, biz, req.Phone, req.Code)
+	//if err
+	//if !ok{
+	//
+	}
+
+}
+
+func (u *UserHandler) SendSMS(ctx *gin.Context) {
+	type Req struct {
+		Phone string `json:"phone"`
+	}
+	var req Req
+	err := ctx.Bind(&req)
+	if err != nil{
+		return
+	}
+	u.codeSvc.Send(ctx, biz, req.Phone)
 }
 
 func (u *UserHandler) Login(ctx *gin.Context) {
