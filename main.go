@@ -8,9 +8,8 @@ import (
 	"geekgo-webook/internal/web"
 	"geekgo-webook/internal/web/middleware"
 	"github.com/gin-contrib/cors"
-	"github.com/gin-contrib/sessions"
-	"github.com/gin-contrib/sessions/redis"
 	"github.com/gin-gonic/gin"
+	"github.com/redis/go-redis/v9"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"strings"
@@ -31,6 +30,13 @@ func initDB() *gorm.DB {
 		panic(err)
 	}
 	return db
+}
+
+func initRedis() redis.Cmdable {
+	redisClient := redis.NewClient(&redis.Options{
+		Addr: "localhost:6379",
+	})
+	return redisClient
 }
 
 func main() {
@@ -59,9 +65,10 @@ func main() {
 
 	// 使用session middleware 可以提取session 使用session处理登录态的问题 在登陆成功之后把session保存起来 然后再设置登录校验的middleware来校验session
 	// 代码示例 https://github.com/gin-contrib/sessions
-	store, _ := redis.NewStore(10, "tcp", "localhost:6379", "", []byte("secret"))
-	server.Use(sessions.Sessions("mysession", store)) // middleware每次请求都会走这里，
-	// sessions.Sessions返回的是HandlerFunc 会创建一个session结构体
+	//store, _ := redis.NewStore(10, "tcp", "localhost:6379", "", []byte("secret"))
+	//server.Use(sessions.Sessions("mysession", store)) // middleware每次请求都会走这里，
+
+	//// sessions.Sessions返回的是HandlerFunc 会创建一个session结构体
 	// s := &session{name, c.Request, store, nil, false, c.Writer}
 	//		c.Set(DefaultKey, s) c是gin.Context
 	// sessions的使用，
@@ -80,7 +87,7 @@ func main() {
 
 	db := initDB()
 	dao := dao.NewUserDAO(db)
-	//client :=
+	client := initRedis()
 	cache := cache.NewUserCache(client)
 	repo := repository.NewUserRepository(dao, cache)
 	svc := service.NewUserService(repo)
