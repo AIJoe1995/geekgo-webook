@@ -5,6 +5,12 @@ import (
 	"geekgo-webook/internal/repository/cache"
 )
 
+var (
+	ErrCodeSendTooMany        = cache.ErrCodeSendTooMany
+	ErrCodeVerifyTooManyTimes = cache.ErrCodeVerifyTooManyTimes
+	ErrUnknownForCode         = cache.ErrUnknownForCode
+)
+
 type CodeRepository struct {
 	cache *cache.CodeCache
 }

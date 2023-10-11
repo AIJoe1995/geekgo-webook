@@ -2,6 +2,7 @@ package dao
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"github.com/go-sql-driver/mysql"
 	"gorm.io/gorm"
@@ -42,6 +43,13 @@ func (dao *UserDAO) Insert(ctx context.Context, u User) error {
 	}
 	return err
 }
+
+func (dao *UserDAO) FindByPhone(ctx context.Context, phone string) (User, error) {
+	var u User
+	err := dao.db.WithContext(ctx).Where("phone = ?", phone).First(&u).Error
+	return u, err
+}
+
 func (dao *UserDAO) FindById(ctx context.Context, id int64) (User, error) {
 	var u User
 	err := dao.db.WithContext(ctx).Where("id = ?", id).First(&u).Error
@@ -59,11 +67,32 @@ func (dao *UserDAO) FindByEmail(ctx context.Context, email string) (User, error)
 }
 
 // User 直接对应数据库表结构
+//type User struct {
+//	Id int64 `gorm:"primaryKey,autoIncrement"`
+//	// 全部用户唯一
+//	Email    string `gorm:"unique"`
+//	Password string
+//
+//	// 往这面加
+//
+//	// 创建时间，毫秒数
+//	Ctime int64
+//	// 更新时间，毫秒数
+//	Utime int64
+//}
+
 type User struct {
 	Id int64 `gorm:"primaryKey,autoIncrement"`
 	// 全部用户唯一
-	Email    string `gorm:"unique"`
+	Email    sql.NullString `gorm:"unique"`
 	Password string
+
+	// 唯一索引允许有多个空值
+	// 但是不能有多个 ""
+	Phone sql.NullString `gorm:"unique"`
+	// 最大问题就是，你要解引用
+	// 你要判空
+	//Phone *string
 
 	// 往这面加
 

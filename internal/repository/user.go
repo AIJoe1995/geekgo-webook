@@ -2,9 +2,11 @@ package repository
 
 import (
 	"context"
+	"database/sql"
 	"geekgo-webook/internal/domain"
 	"geekgo-webook/internal/repository/cache"
 	"geekgo-webook/internal/repository/dao"
+	"time"
 )
 
 var (
@@ -25,10 +27,15 @@ func NewUserRepository(dao *dao.UserDAO, cache *cache.UserCache) *UserRepository
 }
 
 func (repo *UserRepository) Create(ctx context.Context, u domain.User) error {
-	return repo.dao.Insert(ctx, dao.User{
-		Email:    u.Email,
-		Password: u.Password,
-	})
+	return repo.dao.Insert(ctx, repo.domainToEntity(u))
+}
+
+func (repo *UserRepository) FindByPhone(ctx context.Context, phone string) (domain.User, error) {
+	u, err := repo.dao.FindByPhone(ctx, phone)
+	if err != nil {
+		return domain.User{}, err
+	}
+	return repo.entityToDomain(u), nil
 }
 
 func (repo *UserRepository) FindById(ctx context.Context, uid int64) (domain.User, error) {
@@ -41,11 +48,7 @@ func (repo *UserRepository) FindById(ctx context.Context, uid int64) (domain.Use
 	if err != nil {
 		return domain.User{}, err
 	}
-	u = domain.User{
-		Id:       ue.Id,
-		Email:    ue.Email,
-		Password: ue.Password,
-	}
+	u = repo.entityToDomain(ue)
 
 	go func() {
 		err = repo.cache.Set(ctx, u)
@@ -69,11 +72,7 @@ func (repo *UserRepository) FindByIdV1(ctx context.Context, uid int64) (domain.U
 		if err != nil {
 			return domain.User{}, err
 		}
-		u = domain.User{
-			Id:       ue.Id,
-			Email:    ue.Email,
-			Password: ue.Password,
-		}
+		u = repo.entityToDomain(ue)
 
 		go func() {
 			err = repo.cache.Set(ctx, u)
@@ -96,9 +95,32 @@ func (repo *UserRepository) FindByEmail(ctx context.Context, email string) (doma
 	if err != nil {
 		return domain.User{}, err
 	}
+	return repo.entityToDomain(u), nil
+}
+
+func (repo *UserRepository) entityToDomain(u dao.User) domain.User {
 	return domain.User{
 		Id:       u.Id,
-		Email:    u.Email,
+		Email:    u.Email.String,
 		Password: u.Password,
-	}, nil
+		Phone:    u.Phone.String,
+		Ctime:    time.UnixMilli(u.Ctime),
+	}
+}
+
+func (repo *UserRepository) domainToEntity(u domain.User) dao.User {
+	return dao.User{
+		Id: u.Id,
+		Email: sql.NullString{
+			String: u.Email,
+			// 我确实有手机号
+			Valid: u.Email != "",
+		},
+		Phone: sql.NullString{
+			String: u.Phone,
+			Valid:  u.Phone != "",
+		},
+		Password: u.Password,
+		Ctime:    u.Ctime.UnixMilli(),
+	}
 }

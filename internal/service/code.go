@@ -8,6 +8,12 @@ import (
 	"math/rand"
 )
 
+var (
+	ErrCodeSendTooMany        = repository.ErrCodeSendTooMany
+	ErrCodeVerifyTooManyTimes = repository.ErrCodeVerifyTooManyTimes
+	ErrUnknownForCode         = repository.ErrUnknownForCode
+)
+
 const codeTplId = "1877556"
 
 type CodeService struct {

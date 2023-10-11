@@ -34,6 +34,11 @@ func (svc *UserService) SignUp(ctx context.Context, u domain.User) error {
 	return svc.repo.Create(ctx, u)
 }
 
+func (svc *UserService) FindOrCreate(ctx context.Context, phone string) (domain.User, error) {
+	u, err := svc.repo.FindByPhone(ctx, phone)
+	return u, err
+}
+
 func (svc *UserService) Profile(ctx context.Context, uid int64) (domain.User, error) {
 	u, err := svc.repo.FindById(ctx, uid)
 	return u, err

@@ -16,7 +16,7 @@ type UserHandler struct {
 	emailExp    *regexp.Regexp
 	passwordExp *regexp.Regexp
 	svc         *service.UserService
-	codeSvc *service.CodeService
+	codeSvc     *service.CodeService
 }
 
 const biz = "login"
@@ -26,7 +26,7 @@ const (
 	passwordRegexPattern = `^(?=.*[A-Za-z])(?=.*\d)(?=.*[$@$!%*#?&])[A-Za-z\d$@$!%*#?&]{8,}$`
 )
 
-func NewUserHandler(svc *service.UserService) *UserHandler {
+func NewUserHandler(svc *service.UserService, codeSvc *service.CodeService) *UserHandler {
 	emailExp := regexp.MustCompile(emailRegexPattern, regexp.None)
 	passwordExp := regexp.MustCompile(passwordRegexPattern, regexp.None)
 
@@ -34,6 +34,7 @@ func NewUserHandler(svc *service.UserService) *UserHandler {
 		emailExp:    emailExp,
 		passwordExp: passwordExp,
 		svc:         svc,
+		codeSvc:     codeSvc,
 	}
 }
 
@@ -47,6 +48,7 @@ func (u *UserHandler) RegisterRoutes(server *gin.Engine) {
 	//ug.POST("/login", u.Login)
 	ug.POST("/login", u.LoginJWT)
 	ug.POST("/login_sms", u.LoginSMS)
+	ug.POST("/login_sms/code/send", u.SendLoginSMSCode)
 	ug.POST("/edit", u.Edit)
 	ug.GET("/logout", u.Logout)
 }
@@ -161,22 +163,11 @@ func (u *UserHandler) LoginJWT(ctx *gin.Context) {
 	// jwt tokenstring 包含Header(加密算法) Payload(数据) Signature(签名)
 	// 参考教程 https://pkg.go.dev/github.com/golang-jwt/jwt#example-New-Hmac
 	//token := jwt.New(jwt.SigningMethodHS512)
-	claims := UserClaims{
-		Uid: user.Id,
-		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute)),
-		},
-		UserAgent: ctx.Request.UserAgent(),
-	}
-	token := jwt.NewWithClaims(jwt.SigningMethodHS512, claims)
-	tokenStr, err := token.SignedString([]byte("95osj3fUD7fo0mlYdDbncXz4VD2igvf0"))
-	if err != nil {
-		ctx.String(http.StatusInternalServerError, "系统错误")
+	if err = u.setJWTToken(ctx, user.Id); err != nil {
+		ctx.String(http.StatusOK, "系统错误")
 		return
 	}
-	ctx.Header("x-jwt-token", tokenStr)
-	fmt.Println(user)
-	ctx.String(http.StatusOK, "登录成功")
+	ctx.String(http.StatusOK, "登陆成功")
 	return
 }
 
@@ -191,26 +182,80 @@ func (u *UserHandler) LoginSMS(ctx *gin.Context) {
 	if err != nil {
 		return
 	}
+
 	// Verify 验证验证码 逻辑 过期时间 验证不成功 重试次数 验证成功删除
 	// 调用验证码服务的Verify功能
-	//ok, err := u.codeSvc.Verify(ctx, biz, req.Phone, req.Code)
-	//if err
-	//if !ok{
-	//
+	ok, err := u.codeSvc.Verify(ctx, biz, req.Phone, req.Code)
+	if err != nil {
+		ctx.String(http.StatusOK, "系统错误")
+		return
 	}
+	if !ok {
+		ctx.String(http.StatusOK, "验证码有误")
+		return
+	}
+
+	// 我这个手机号，会不会是一个新用户呢？
+	// 这样子
+	// 验证码验证成功需要维持登录态 需要从数据库找到userId 但是可能是新用户
+	user, err := u.svc.FindOrCreate(ctx, req.Phone)
+	if err != nil {
+		ctx.String(http.StatusOK, "系统错误")
+		return
+	}
+
+	// 这边要怎么办呢？
+	// 从哪来？
+	if err = u.setJWTToken(ctx, user.Id); err != nil {
+		ctx.String(http.StatusOK, "系统错误")
+		return
+	}
+	ctx.String(http.StatusOK, "验证码校验通过")
 
 }
 
-func (u *UserHandler) SendSMS(ctx *gin.Context) {
+// 抽取出登录成功设置jwt
+func (u *UserHandler) setJWTToken(ctx *gin.Context, uid int64) error {
+	claims := UserClaims{
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute * 30)),
+		},
+		Uid:       uid,
+		UserAgent: ctx.Request.UserAgent(),
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS512, claims)
+	tokenStr, err := token.SignedString([]byte("95osj3fUD7fo0mlYdDbncXz4VD2igvf0"))
+	if err != nil {
+		return err
+	}
+	ctx.Header("x-jwt-token", tokenStr)
+	return nil
+}
+
+func (u *UserHandler) SendLoginSMSCode(ctx *gin.Context) {
 	type Req struct {
 		Phone string `json:"phone"`
 	}
 	var req Req
 	err := ctx.Bind(&req)
-	if err != nil{
+	if err != nil {
 		return
 	}
-	u.codeSvc.Send(ctx, biz, req.Phone)
+	if req.Phone == "" {
+		ctx.String(http.StatusOK, "输入有误")
+		return
+	}
+
+	err = u.codeSvc.Send(ctx, biz, req.Phone)
+	switch err {
+	case nil:
+		ctx.String(http.StatusOK, "发送成功")
+	case service.ErrCodeSendTooMany:
+		ctx.String(http.StatusOK, "发送太频繁，请稍后再试")
+
+	default:
+		ctx.String(http.StatusOK, "系统错误")
+	}
 }
 
 func (u *UserHandler) Login(ctx *gin.Context) {
