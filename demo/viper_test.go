@@ -6,6 +6,7 @@ import (
 	"github.com/fsnotify/fsnotify"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
+	_ "github.com/spf13/viper/remote"
 	"os"
 	"path/filepath"
 	"testing"
@@ -31,6 +32,8 @@ redis:
 }
 
 func TestViperRemote(t *testing.T) {
+	// remote 需要导入 _ "github.com/spf13/viper/remote"
+
 	err := viper.AddRemoteProvider("etcd3",
 		"http://127.0.0.1:12379",
 		"/webook")
