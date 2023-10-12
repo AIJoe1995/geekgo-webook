@@ -3,6 +3,8 @@ package main
 import (
 	"geekgo-webook/internal/repository/dao"
 	"github.com/redis/go-redis/v9"
+	"github.com/spf13/pflag"
+	//_ "github.com/spf13/viper/remote" // 这里是为了init()
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
@@ -28,6 +30,11 @@ func initRedis() redis.Cmdable {
 		Addr: "localhost:6379",
 	})
 	return redisClient
+}
+
+// 支持命令行传参
+func initViper() {
+	cfile := pflag.String("config", "config/config.yaml", "指定配置文件路径")
 }
 
 // 修改为面向接口编程， 从dao->repository->service->web 逐层修改， A调用B 那么B应该是接口，dao是最底层被调用，从dao开始修改

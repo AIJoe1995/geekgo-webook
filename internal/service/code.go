@@ -16,6 +16,11 @@ var (
 
 const codeTplId = "1877556"
 
+// codeTplId 修改从配置文件读取 这会和viper强耦合，
+// 需要考虑同时读写的并发问题， 用原子操作
+
+//var codeTplId atomic.String = atomic.String{}
+
 type CodeService interface {
 	Send(ctx context.Context, biz string, phone string) error
 	Verify(ctx context.Context, biz, phone, inputCode string) (bool, error)
@@ -34,6 +39,10 @@ func NewCodeService(repo repository.CodeRepository, smsSvc sms.Service) CodeServ
 }
 
 func (svc *codeService) Send(ctx context.Context, biz string, phone string) error {
+	//codeTplId.Store("1877556")
+	//viper.OnConfigChange(func(in fsnotify.Event) {
+	//	codeTplId.Store(viper.GetString("code.tpl.id"))
+	//})
 	code := svc.generateCode()
 	err := svc.repo.Store(ctx, biz, phone, code)
 	if err != nil {
@@ -45,6 +54,7 @@ func (svc *codeService) Send(ctx context.Context, biz string, phone string) erro
 	// 发送出去
 
 	err = svc.smsSvc.Send(ctx, codeTplId, []string{code}, phone)
+	//err = svc.smsSvc.Send(ctx, codeTplId.Load(), []string{code}, phone)
 	return err
 }
 
