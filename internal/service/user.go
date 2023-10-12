@@ -33,6 +33,18 @@ type UserService interface {
 //}
 //}
 
+//type userServiceV2 struct {
+//	repo repository.UserRepository
+//	logger logger.LoggerV1 // 这里指定了zap.Logger 最好是提供一个logger的接口 再提供zap的实现，以便之后扩展
+//}
+//
+//func NewUserServiceV2(repo repository.UserRepository, logger  logger.LoggerV1 ) UserService{
+//	return &userServiceV2{
+//		repo, repo,
+//		logger: logger
+//}
+//}
+
 type userService struct {
 	repo repository.UserRepository
 }
