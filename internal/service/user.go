@@ -5,7 +5,6 @@ import (
 	"errors"
 	"geekgo-webook/internal/domain"
 	"geekgo-webook/internal/repository"
-
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -21,6 +20,18 @@ type UserService interface {
 	Login(ctx context.Context, email, password string) (domain.User, error)
 	FindOrCreateByWechat(ctx context.Context, info domain.WechatInfo) (domain.User, error)
 }
+
+//type userServiceV1 struct {
+//	repo repository.UserRepository
+//	logger *zap.Logger // 这里指定了zap.Logger 最好是提供一个logger的接口 再提供zap的实现，以便之后扩展
+//}
+//
+//func NewUserServiceV1(repo repository.UserRepository, logger *zap.Logger) UserService{
+//	return &userServiceV1{
+//		repo, repo,
+//		logger: logger
+//}
+//}
 
 type userService struct {
 	repo repository.UserRepository
