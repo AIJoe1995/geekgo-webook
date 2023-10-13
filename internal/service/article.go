@@ -21,7 +21,10 @@ type articeService struct {
 }
 
 func (a articeService) Save(ctx context.Context, art domain.Article) (int64, error) {
-	id, err := a.repo.Create(ctx, art)
-	return id, err
+	// 区分新建和修改
+	if art.Id > 0 {
+		return art.Id, a.repo.Update(ctx, art)
+	}
+	return a.repo.Create(ctx, art)
 
 }

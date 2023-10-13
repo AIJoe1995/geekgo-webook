@@ -63,7 +63,9 @@ func (h *ArticleHandler) Edit(ctx *gin.Context) {
 	// 调用svc 创建article
 	//1. 定义articleservice接口 提供svc.Save的壳子 2. 向articlehandler 里注入articleservice
 	// 3. 创建了注入了新的依赖 需要更改wire
+	// 在service层面处理是新建还是修改
 	id, err := h.svc.Save(ctx, domain.Article{
+		Id:      req.Id,
 		Title:   req.Title,
 		Content: req.Content,
 		Author: domain.Author{
