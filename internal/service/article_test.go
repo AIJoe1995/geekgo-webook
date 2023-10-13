@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"geekgo-webook/internal/domain"
 	"geekgo-webook/internal/repository/article"
 	artrepomocks "geekgo-webook/internal/repository/article/mocks"
@@ -59,6 +60,131 @@ func Test_articeService_PublishV1(t *testing.T) {
 			},
 			wantErr: nil,
 			wantId:  1,
+		},
+
+		{
+			name: "修改并发表成功",
+			mock: func(ctrl *gomock.Controller) (
+				article.ArticleAuthorRepository,
+				article.ArticleReaderRepository,
+			) {
+				author := artrepomocks.NewMockArticleAuthorRepository(ctrl)
+				author.EXPECT().Update(gomock.Any(),
+					domain.Article{
+						Id:      2,
+						Title:   "我的标题",
+						Content: "我的内容",
+						Author: domain.Author{
+							Id: 123,
+						},
+					}).Return(nil) // 注意返回的类型 如果不做 int64(1)转换 测试会失败 missing call
+				reader := artrepomocks.NewMockArticleReaderRepository(ctrl)
+				reader.EXPECT().Save(gomock.Any(),
+					domain.Article{
+						Id:      2,
+						Title:   "我的标题",
+						Content: "我的内容",
+						Author: domain.Author{
+							Id: 123,
+						},
+					}).Return(int64(2), nil)
+				return author, reader
+			},
+			art: domain.Article{
+				Id:      2,
+				Title:   "我的标题",
+				Content: "我的内容",
+				Author: domain.Author{
+					Id: 123,
+				},
+			},
+			wantErr: nil,
+			wantId:  2,
+		},
+
+		{
+			name: "新建保存到制作库成功，但线上库失败", // Times AnyTimes
+			mock: func(ctrl *gomock.Controller) (
+				article.ArticleAuthorRepository,
+				article.ArticleReaderRepository,
+			) {
+				author := artrepomocks.NewMockArticleAuthorRepository(ctrl)
+				author.EXPECT().Create(gomock.Any(),
+					domain.Article{
+						Title:   "我的标题",
+						Content: "我的内容",
+						Author: domain.Author{
+							Id: 123,
+						},
+					}).Return(int64(3), nil) // 注意返回的类型 如果不做 int64(1)转换 测试会失败 missing call
+				reader := artrepomocks.NewMockArticleReaderRepository(ctrl)
+				reader.EXPECT().Save(gomock.Any(),
+					domain.Article{
+						Id:      3,
+						Title:   "我的标题",
+						Content: "我的内容",
+						Author: domain.Author{
+							Id: 123,
+						},
+					}).Times(3).Return(int64(0), errors.New("error"))
+				return author, reader
+			},
+			art: domain.Article{
+				Title:   "我的标题",
+				Content: "我的内容",
+				Author: domain.Author{
+					Id: 123,
+				},
+			},
+			wantErr: errors.New("error"),
+			wantId:  0,
+		},
+		{
+			name: "新建保存到制作库成功，线上库重试之后成功",
+			mock: func(ctrl *gomock.Controller) (
+				article.ArticleAuthorRepository,
+				article.ArticleReaderRepository,
+			) {
+				author := artrepomocks.NewMockArticleAuthorRepository(ctrl)
+				author.EXPECT().Create(gomock.Any(),
+					domain.Article{
+						Title:   "我的标题",
+						Content: "我的内容",
+						Author: domain.Author{
+							Id: 123,
+						},
+					}).Return(int64(4), nil) // 注意返回的类型 如果不做 int64(1)转换 测试会失败 missing call
+				reader := artrepomocks.NewMockArticleReaderRepository(ctrl)
+				reader.EXPECT().Save(gomock.Any(),
+					domain.Article{
+						Id:      4,
+						Title:   "我的标题",
+						Content: "我的内容",
+						Author: domain.Author{
+							Id: 123,
+						},
+					}).Return(int64(0), errors.New("error")).Return(int64(4), nil)
+				//reader.EXPECT().Save(gomock.Any(),
+				//	domain.Article{
+				//		Id:      4,
+				//		Title:   "我的标题",
+				//		Content: "我的内容",
+				//		Author: domain.Author{
+				//			Id: 123,
+				//		},
+				//	}).Return(int64(4), nil)
+				return author, reader
+			},
+			art: domain.Article{
+
+				Title:   "我的标题",
+				Content: "我的内容",
+				Author: domain.Author{
+					Id: 123,
+				},
+			},
+			wantErr: nil,
+			wantId:  4,
 		},
 	}
 
