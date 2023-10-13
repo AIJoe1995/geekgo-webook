@@ -1,0 +1,1 @@
+mockgen -source=C:\Users\Oasis\go\src\geekgo-webook\internal\service\article.go -destination=C:\Users\Oasis\go\src\geekgo-webook\internal\service\mocks\article.mock.go -package=svcmocks

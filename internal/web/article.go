@@ -27,15 +27,58 @@ func NewArticleHandler(svc service.ArticleService, logger logger.LoggerV1) *Arti
 func (h *ArticleHandler) RegisterRoutes(server *gin.Engine) {
 	ag := server.Group("/articles")
 	ag.POST("/edit", h.Edit)
+	ag.POST("/publish", h.Publish)
+}
+
+func (h *ArticleHandler) Publish(ctx *gin.Context) {
+	//
+	var req ArticleReq
+	if err := ctx.Bind(&req); err != nil {
+		return
+	}
+	c, _ := ctx.Get("claims")
+	claims, ok := c.(*ijwt.UserClaims)
+	if !ok {
+		// 你可以考虑监控住这里
+		//ctx.AbortWithStatus(http.StatusUnauthorized)
+		ctx.JSON(http.StatusOK, Result{
+			Code: 5,
+			Msg:  "系统错误",
+		})
+		h.logger.Error("未发现用户的 session 信息")
+		return
+	}
+
+	id, err := h.svc.Publish(ctx, domain.Article{
+		Id:      req.Id,
+		Title:   req.Title,
+		Content: req.Content,
+		Author: domain.Author{
+			Id: claims.Uid,
+		},
+	})
+	if err != nil {
+		ctx.JSON(http.StatusOK, Result{
+			Code: 5,
+			Msg:  "系统错误",
+		})
+	}
+
+	ctx.JSON(http.StatusOK, Result{
+		Msg:  "OK",
+		Data: id,
+	})
+
+}
+
+type ArticleReq struct {
+	Id      int64  `json:"id"`
+	Title   string `json:"title"`
+	Content string `json:"content"`
 }
 
 // TDD 写了测试框架后 来写Edit的逻辑
 func (h *ArticleHandler) Edit(ctx *gin.Context) {
-	type ArticleReq struct {
-		Id      int64  `json:"id"`
-		Title   string `json:"title"`
-		Content string `json:"content"`
-	}
 
 	var req ArticleReq
 	if err := ctx.Bind(&req); err != nil { // 注意&req传指针 修改req
