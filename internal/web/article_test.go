@@ -3,6 +3,7 @@ package web
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"geekgo-webook/internal/domain"
 	"geekgo-webook/internal/service"
 	svcmocks "geekgo-webook/internal/service/mocks"
@@ -49,6 +50,33 @@ func TestArticleHandler_Publish(t *testing.T) {
 			wantRes: Result{
 				Data: float64(1),
 				Msg:  "OK",
+			},
+		},
+		{
+			name: "publish失败",
+			mock: func(ctrl *gomock.Controller) service.ArticleService {
+				svc := svcmocks.NewMockArticleService(ctrl)
+				svc.EXPECT().Publish(gomock.Any(), domain.Article{
+					Title:   "我的标题",
+					Content: "我的内容",
+					Author: domain.Author{
+						Id: 123,
+					},
+				}).Return(int64(0), errors.New("error"))
+				return svc
+			},
+			reqBody: `
+{
+	"title":"我的标题",
+	"content": "我的内容"
+}
+`,
+			wantCode: 200,
+			// Result 泛型 json反序列化后 会把数字变成float64类型
+			wantRes: Result{
+				Code: 5,
+				//Data: float64(0),
+				Msg: "系统错误",
 			},
 		},
 	}
