@@ -3,32 +3,87 @@ package service
 import (
 	"context"
 	"geekgo-webook/internal/domain"
-	"geekgo-webook/internal/repository"
-	"github.com/gin-gonic/gin"
+	"geekgo-webook/internal/repository/article"
+	//"geekgo-webook/internal/web" // service不应该引用web? 会造成循环依赖？
+	"geekgo-webook/pkg/logger"
 )
 
 type ArticleService interface {
 	Save(ctx context.Context, art domain.Article) (int64, error)
-	Publish(ctx *gin.Context, article domain.Article) (int64, error) // 需要实现一个Article的domain
+	Publish(ctx context.Context, article domain.Article) (int64, error) // 需要实现一个Article的domain
+	PublishV1(ctx context.Context, art domain.Article) (int64, error)
 }
 
-func NewArticleService(repo repository.ArticleRepository) ArticleService {
+func NewArticleService(repo article.ArticleRepository) ArticleService {
 	return &articeService{
 		repo: repo,
 	}
 }
 
+//type articleServiceV1 struct {
+// 没有实现接口 会报错 暂时使用articleService来初始化带有author和reader的版本
+//	author article.ArticleAuthorRepository
+//	reader article.ArticleReaderRepository
+//	l      logger.LoggerV1
+//}
+
+func NewArticleServiceV1(author_repo article.ArticleAuthorRepository, reader_repo article.ArticleReaderRepository, l logger.LoggerV1) ArticleService {
+	return &articeService{
+		author: author_repo,
+		reader: reader_repo,
+		logger: l,
+	}
+
+}
+
 type articeService struct {
-	repo repository.ArticleRepository
+	repo article.ArticleRepository
+
+	// v1
+	author article.ArticleAuthorRepository
+	reader article.ArticleReaderRepository
+	logger logger.LoggerV1
 }
 
 // 测试web的Publish方法时 会mock ArticleService 提供输入输出 所以暂时不需要implement
-func (a articeService) Publish(ctx *gin.Context, article domain.Article) (int64, error) {
-	//TODO implement me
+func (a *articeService) Publish(ctx context.Context, article domain.Article) (int64, error) {
+	// TDD service的publish方法
+	// service会调用repo 存在线上库和制作库 在repo中区分
+	// 制作库
+	//id, err := a.repo.Create(ctx, art)
+	//// 线上库呢？
+	//a.repo.SyncToLiveDB(ctx, art)
 	panic("implement me")
 }
 
-func (a articeService) Save(ctx context.Context, art domain.Article) (int64, error) {
+func (a *articeService) PublishV1(ctx context.Context, art domain.Article) (int64, error) {
+	var (
+		id  = art.Id
+		err error
+	)
+	// 注入repository层的 AuthorArticleRepository ReaderArticleRepository
+	// a.author 操作制作库
+	if art.Id > 0 {
+		err = a.author.Update(ctx, art)
+	} else {
+		id, err = a.author.Create(ctx, art)
+	}
+	if err != nil {
+		return 0, err
+	}
+	// 确保制作库和线上库id相同
+	art.Id = id
+	// a.reader 操作制作库
+	id, err = a.reader.Save(ctx, art)
+	if err != nil {
+		a.logger.Error("部分失败，保存到线上库失败", logger.Error(err))
+
+	}
+	return id, err
+
+}
+
+func (a *articeService) Save(ctx context.Context, art domain.Article) (int64, error) {
 	// 区分新建和修改
 	if art.Id > 0 {
 		return art.Id, a.repo.Update(ctx, art)

@@ -4,6 +4,7 @@ package startup
 
 import (
 	"geekgo-webook/internal/repository"
+	"geekgo-webook/internal/repository/article"
 	"geekgo-webook/internal/repository/cache"
 	"geekgo-webook/internal/repository/dao"
 	"geekgo-webook/internal/service"
@@ -31,7 +32,7 @@ func InitWebServer() *gin.Engine {
 		cache.NewCodeCache,
 		repository.NewUserRepository,
 		repository.NewCodeRepository,
-		repository.NewArticleRepository,
+		article.NewArticleRepository,
 		service.NewUserService,
 		service.NewCodeService,
 		service.NewArticleService,
@@ -63,7 +64,7 @@ func InitArticleHandler() *web.ArticleHandler {
 		dao.NewGORMArticleDAO,
 		service.NewArticleService,
 		web.NewArticleHandler,
-		repository.NewArticleRepository,
+		article.NewArticleRepository,
 	)
 	return &web.ArticleHandler{}
 }

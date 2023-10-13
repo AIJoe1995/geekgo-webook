@@ -8,6 +8,7 @@ package startup
 
 import (
 	"geekgo-webook/internal/repository"
+	"geekgo-webook/internal/repository/article"
 	"geekgo-webook/internal/repository/cache"
 	"geekgo-webook/internal/repository/dao"
 	"geekgo-webook/internal/service"
@@ -38,7 +39,7 @@ func InitWebServer() *gin.Engine {
 	wechatHandlerConfig := NewWechatHandlerConfig()
 	oAuth2WechatHandler := web.NewOAuth2WechatHandler(wechatService, userService, handler, wechatHandlerConfig)
 	articleDAO := dao.NewGORMArticleDAO(gormDB)
-	articleRepository := repository.NewArticleRepository(articleDAO)
+	articleRepository := article.NewArticleRepository(articleDAO)
 	articleService := service.NewArticleService(articleRepository)
 	loggerV1 := InitLog()
 	articleHandler := web.NewArticleHandler(articleService, loggerV1)
@@ -50,7 +51,7 @@ func InitWebServer() *gin.Engine {
 func InitArticleHandler() *web.ArticleHandler {
 	gormDB := InitTestDB()
 	articleDAO := dao.NewGORMArticleDAO(gormDB)
-	articleRepository := repository.NewArticleRepository(articleDAO)
+	articleRepository := article.NewArticleRepository(articleDAO)
 	articleService := service.NewArticleService(articleRepository)
 	loggerV1 := InitLog()
 	articleHandler := web.NewArticleHandler(articleService, loggerV1)
