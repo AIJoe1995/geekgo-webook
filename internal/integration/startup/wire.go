@@ -7,6 +7,7 @@ import (
 	"geekgo-webook/internal/repository/article"
 	"geekgo-webook/internal/repository/cache"
 	"geekgo-webook/internal/repository/dao"
+	article2 "geekgo-webook/internal/repository/dao/article"
 	"geekgo-webook/internal/service"
 	"geekgo-webook/internal/web"
 	ijwt "geekgo-webook/internal/web/jwt"
@@ -27,7 +28,7 @@ func InitWebServer() *gin.Engine {
 		InitTestDB, InitRedis,
 		ioc.InitSMSService,
 		dao.NewUserDAO,
-		dao.NewGORMArticleDAO,
+		article2.NewGORMArticleDAO,
 		cache.NewUserCache,
 		cache.NewCodeCache,
 		repository.NewUserRepository,
@@ -61,7 +62,7 @@ var userSvcProvider = wire.NewSet(
 // 提供InitArticleHandler 简单的依赖注入， 方便测试article
 func InitArticleHandler() *web.ArticleHandler {
 	wire.Build(thirdProvider,
-		dao.NewGORMArticleDAO,
+		article2.NewGORMArticleDAO,
 		service.NewArticleService,
 		web.NewArticleHandler,
 		article.NewArticleRepository,
