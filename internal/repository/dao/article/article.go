@@ -13,12 +13,14 @@ type ArticleDAO interface {
 	UpdateById(ctx context.Context, art Article) error // 这里要是用dao层定义的article
 	Sync(ctx context.Context, art Article) (int64, error)
 	Upsert(ctx context.Context, art PublishArticle) error
+	Transaction(ctx context.Context, bizFunc func(txDAO ArticleDAO) error) error
 }
 
 type GORMArticleDAO struct {
 	db *gorm.DB
 }
 
+// 提供类似gorm.DB.Transaction的方法 让repo可以调用dao这里的事务
 func (G *GORMArticleDAO) Transaction(ctx context.Context,
 	bizFunc func(txDAO ArticleDAO) error) error {
 	return G.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {

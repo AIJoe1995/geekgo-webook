@@ -41,6 +41,14 @@ func NewArticleRepository(dao article.ArticleDAO) ArticleRepository {
 	}
 }
 
+func (c *CachedArticleRepository) SyncV2_1(ctx context.Context, art domain.Article) (int64, error) {
+	// 谁在控制事务，是 repository，还是DAO在控制事务？
+	c.dao.Transaction(ctx, func(txDAO article.ArticleDAO) error {
+		return nil
+	})
+	return 0, nil
+}
+
 // SyncV2尝试在repository解决事务 这需要在CachedArticleRepository里面增加 db *gorm.DB
 // 确保保存到制作库线上库同时成功 同时失败
 // 如果执行事务中间panic掉了，既没有回滚也没有提交，事务会一直挂在数据库，最好 defer.Rollback()
