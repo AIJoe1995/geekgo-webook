@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"geekgo-webook/internal/integration/startup"
+	"geekgo-webook/internal/repository/dao"
 	ijwt "geekgo-webook/internal/web/jwt"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
@@ -34,6 +35,11 @@ func (s *ArticleTestSuite) SetupSuite() {
 
 }
 
+// 每一个测试运行完之后都会执行
+func (s *ArticleTestSuite) TearDownTest() {
+	s.db.Exec("truncate Table articles")
+}
+
 func (s *ArticleTestSuite) TestEdit() {
 	t := s.T()
 	testCases := []struct {
@@ -58,6 +64,21 @@ func (s *ArticleTestSuite) TestEdit() {
 			},
 			after: func(t *testing.T) {
 				// 验证数据库
+
+				// 从数据库中拿到dao.Article 来对比数据
+				var art dao.Article
+				err := s.db.Where("id = ?", 1).First(&art).Error
+				assert.NoError(t, err)
+				assert.True(t, art.Ctime > 0)
+				assert.True(t, art.Utime > 0)
+				art.Ctime = 0
+				art.Utime = 0
+				assert.Equal(t, dao.Article{
+					Id:       1,
+					Title:    "我的标题",
+					Content:  "我的内容",
+					AuthorId: 123,
+				}, art)
 
 			},
 			art: Article{

@@ -21,5 +21,7 @@ type articeService struct {
 }
 
 func (a articeService) Save(ctx context.Context, art domain.Article) (int64, error) {
-	return 1, nil
+	id, err := a.repo.Create(ctx, art)
+	return id, err
+
 }

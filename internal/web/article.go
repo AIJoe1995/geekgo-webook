@@ -37,7 +37,7 @@ func (h *ArticleHandler) Edit(ctx *gin.Context) {
 	}
 
 	var req ArticleReq
-	if err := ctx.Bind(req); err != nil {
+	if err := ctx.Bind(&req); err != nil { // 注意&req传指针 修改req
 		return
 	}
 
