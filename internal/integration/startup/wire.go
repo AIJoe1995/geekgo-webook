@@ -26,10 +26,12 @@ func InitWebServer() *gin.Engine {
 		InitTestDB, InitRedis,
 		ioc.InitSMSService,
 		dao.NewUserDAO,
+		dao.NewGORMArticleDAO,
 		cache.NewUserCache,
 		cache.NewCodeCache,
 		repository.NewUserRepository,
 		repository.NewCodeRepository,
+		repository.NewArticleRepository,
 		service.NewUserService,
 		service.NewCodeService,
 		service.NewArticleService,
@@ -58,10 +60,10 @@ var userSvcProvider = wire.NewSet(
 // 提供InitArticleHandler 简单的依赖注入， 方便测试article
 func InitArticleHandler() *web.ArticleHandler {
 	wire.Build(thirdProvider,
-		//dao.NewGORMArticleDAO,
+		dao.NewGORMArticleDAO,
 		service.NewArticleService,
 		web.NewArticleHandler,
-		//repository.NewArticleRepository,
+		repository.NewArticleRepository,
 	)
 	return &web.ArticleHandler{}
 }
