@@ -8,6 +8,10 @@ var _ handler = (*ArticleHandler)(nil)
 type ArticleHandler struct {
 }
 
+func NewArticleHandler() *ArticleHandler {
+	return &ArticleHandler{}
+}
+
 func (h *ArticleHandler) RegisterRoutes(server *gin.Engine) {
 	ag := server.Group("/articles")
 	ag.POST("/edit", h.Edit)

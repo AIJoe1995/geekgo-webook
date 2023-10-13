@@ -12,15 +12,17 @@ import (
 	"time"
 )
 
-func InitGin(mdw []gin.HandlerFunc, userHdl *web.UserHandler, wechatHdl *web.OAuth2WechatHandler) *gin.Engine {
+func InitWebServer(mdw []gin.HandlerFunc, userHdl *web.UserHandler, wechatHdl *web.OAuth2WechatHandler,
+	artHdl *web.ArticleHandler) *gin.Engine {
 	server := gin.Default()
 	server.Use(mdw...)
 	userHdl.RegisterRoutes(server)
+	artHdl.RegisterRoutes(server)
 	wechatHdl.RegisterRoutes(server)
 	return server
 }
 
-func InitGinMiddlewares(redisClient redis.Cmdable, jwtHdl ijwt.Handler) []gin.HandlerFunc {
+func InitMiddlewares(redisClient redis.Cmdable, jwtHdl ijwt.Handler) []gin.HandlerFunc {
 	return []gin.HandlerFunc{
 		corsHdl(),
 		middleware.NewLoginJWTMiddlewareBuilder(jwtHdl).

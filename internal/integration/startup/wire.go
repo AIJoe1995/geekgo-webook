@@ -1,6 +1,6 @@
 //go:build wireinject
 
-package main
+package startup
 
 import (
 	"geekgo-webook/internal/repository"
@@ -22,7 +22,8 @@ import (
 
 func InitWebServer() *gin.Engine {
 	wire.Build(
-		ioc.InitDB, ioc.InitRedis,
+		// 测试的db代替开发的db
+		InitTestDB, InitRedis,
 		ioc.InitSMSService,
 		dao.NewUserDAO,
 		cache.NewUserCache,
@@ -32,11 +33,14 @@ func InitWebServer() *gin.Engine {
 		service.NewUserService,
 		service.NewCodeService,
 		web.NewUserHandler,
+		web.NewArticleHandler,
+
 		ioc.InitWebServer,
 		ioc.InitMiddlewares,
 		ijwt.NewRedisJWTHandler,
-		ioc.InitWechatService,
-		ioc.NewWechatHandlerConfig,
+		//ioc.InitWechatService,
+		InitPhantomWechatService,
+		NewWechatHandlerConfig,
 		web.NewOAuth2WechatHandler,
 	)
 	return new(gin.Engine)
