@@ -140,6 +140,50 @@ func (s *ArticleTestSuite) TestEdit() {
 				Msg:  "OK",
 			},
 		},
+		{
+			name: "修改别人的帖子，不应该成功",
+			before: func(t *testing.T) {
+				// 提前准备数据
+				err := s.db.Create(dao.Article{
+					Id:      3,
+					Title:   "我的标题",
+					Content: "我的内容",
+					// 测试模拟的用户 ID 是123，这里是 789
+					// 意味着你在修改别人的数据
+					AuthorId: 789,
+					// 跟时间有关的测试，不是逼不得已，不要用 time.Now()
+					// 因为 time.Now() 每次运行都不同，你很难断言
+					Ctime: 123,
+					Utime: 234,
+				}).Error
+				assert.NoError(t, err)
+			},
+			after: func(t *testing.T) {
+				// 验证数据库
+				var art dao.Article
+				err := s.db.Where("id=?", 3).First(&art).Error
+				assert.NoError(t, err)
+				assert.Equal(t, dao.Article{
+					Id:       3,
+					Title:    "我的标题",
+					Content:  "我的内容",
+					Ctime:    123,
+					Utime:    234,
+					AuthorId: 789,
+				}, art)
+			},
+			// 当前用户123 要修改的文章id是3，用户123没有这个帖子， 数据库里789用户有文章id3的帖子， 用户789的帖子不应该被修改
+			art: Article{
+				Id:      3,
+				Title:   "新的标题",
+				Content: "新的内容",
+			},
+			wantCode: http.StatusOK,
+			wantRes: Result[int64]{
+				Code: 5,
+				Msg:  "系统错误",
+			},
+		},
 	}
 
 	for _, tc := range testCases {
