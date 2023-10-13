@@ -32,6 +32,7 @@ func (h *ArticleHandler) RegisterRoutes(server *gin.Engine) {
 // TDD 写了测试框架后 来写Edit的逻辑
 func (h *ArticleHandler) Edit(ctx *gin.Context) {
 	type ArticleReq struct {
+		Id      int64  `json:"id"`
 		Title   string `json:"title"`
 		Content string `json:"content"`
 	}

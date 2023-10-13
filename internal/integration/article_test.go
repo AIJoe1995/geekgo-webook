@@ -3,6 +3,7 @@ package integration
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"geekgo-webook/internal/integration/startup"
 	"geekgo-webook/internal/repository/dao"
 	ijwt "geekgo-webook/internal/web/jwt"
@@ -91,6 +92,54 @@ func (s *ArticleTestSuite) TestEdit() {
 				Msg:  "OK",
 			},
 		},
+		{
+			name: "修改帖子-保存成功",
+			before: func(t *testing.T) {
+				// 准备库里的帖子 修改这个帖子
+				err := s.db.Create(dao.Article{
+					Id:       2,
+					Title:    "我的标题",
+					Content:  "我的内容",
+					AuthorId: 123,
+					// 跟时间有关的测试，不是逼不得已，不要用 time.Now()
+					// 因为 time.Now() 每次运行都不同，你很难断言
+					Ctime: 123,
+					Utime: 234,
+				}).Error
+				assert.NoError(t, err)
+
+			},
+			after: func(t *testing.T) {
+				// 验证数据库
+
+				// 从数据库中拿到dao.Article 来对比数据
+				var art dao.Article
+				err := s.db.Where("id = ?", 2).First(&art).Error
+				assert.NoError(t, err)
+
+				assert.True(t, art.Utime > 234)
+
+				art.Utime = 0
+				assert.Equal(t, dao.Article{
+					Id:       2,
+					Title:    "新的标题",
+					Content:  "新的内容",
+					AuthorId: 123,
+					Ctime:    123,
+				}, art)
+
+			},
+			art: Article{
+				Id:      2,
+				Title:   "新的标题",
+				Content: "新的内容",
+			},
+			wantCode: http.StatusOK,
+			wantRes: Result[int64]{
+				Data: 2,
+				Msg:  "OK",
+			},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -98,6 +147,9 @@ func (s *ArticleTestSuite) TestEdit() {
 			//构造请求
 			//执行请求
 			// 验证结果
+			fmt.Println("执行tc.before开始")
+			tc.before(t)
+			fmt.Println("执行tc.before结束")
 			reqBody, err := json.Marshal(tc.art)
 			assert.NoError(t, err)
 			req, err := http.NewRequest(http.MethodPost, "/articles/edit", bytes.NewBuffer(reqBody)) // 这里为什么用bytes.NewBuffer 不用bytes.NewReader
@@ -119,7 +171,9 @@ func (s *ArticleTestSuite) TestEdit() {
 			err = json.NewDecoder(resp.Body).Decode(&webRes) // 反序列化把resp.Body的值存到结构体webRes中
 			require.NoError(t, err)
 			assert.Equal(t, tc.wantRes, webRes)
-
+			fmt.Println("执行tc.after开始")
+			tc.after(t)
+			fmt.Println("执行tc.after结束")
 		})
 	}
 }
@@ -130,6 +184,7 @@ func TestArticle(t *testing.T) {
 
 // 设计预期输入
 type Article struct {
+	Id      int64
 	Title   string `json:"title"`
 	Content string `json:"content"`
 }
