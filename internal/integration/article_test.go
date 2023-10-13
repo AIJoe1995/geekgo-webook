@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"geekgo-webook/internal/integration/startup"
-	"geekgo-webook/internal/web"
 	ijwt "geekgo-webook/internal/web/jwt"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
@@ -30,7 +29,7 @@ func (s *ArticleTestSuite) SetupSuite() {
 		})
 	})
 	s.db = startup.InitTestDB()
-	artHdl := web.NewArticleHandler()
+	artHdl := startup.InitArticleHandler()
 	artHdl.RegisterRoutes(s.server)
 
 }
@@ -52,7 +51,25 @@ func (s *ArticleTestSuite) TestEdit() {
 		// 我希望 HTTP 响应，带上帖子的 ID
 		wantRes Result[int64]
 	}{
-		{},
+		{
+			name: "新建帖子-保存成功",
+			before: func(t *testing.T) {
+
+			},
+			after: func(t *testing.T) {
+				// 验证数据库
+
+			},
+			art: Article{
+				Title:   "我的标题",
+				Content: "我的内容",
+			},
+			wantCode: http.StatusOK,
+			wantRes: Result[int64]{
+				Data: 1,
+				Msg:  "OK",
+			},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -84,6 +101,10 @@ func (s *ArticleTestSuite) TestEdit() {
 
 		})
 	}
+}
+
+func TestArticle(t *testing.T) {
+	suite.Run(t, &ArticleTestSuite{})
 }
 
 // 设计预期输入

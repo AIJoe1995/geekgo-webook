@@ -32,6 +32,7 @@ func InitWebServer() *gin.Engine {
 		repository.NewCodeRepository,
 		service.NewUserService,
 		service.NewCodeService,
+		service.NewArticleService,
 		web.NewUserHandler,
 		web.NewArticleHandler,
 
@@ -42,6 +43,35 @@ func InitWebServer() *gin.Engine {
 		InitPhantomWechatService,
 		NewWechatHandlerConfig,
 		web.NewOAuth2WechatHandler,
+		InitLog,
 	)
 	return new(gin.Engine)
+}
+
+var thirdProvider = wire.NewSet(InitRedis, InitTestDB, InitLog)
+var userSvcProvider = wire.NewSet(
+	dao.NewUserDAO,
+	cache.NewUserCache,
+	repository.NewUserRepository,
+	service.NewUserService)
+
+// 提供InitArticleHandler 简单的依赖注入， 方便测试article
+func InitArticleHandler() *web.ArticleHandler {
+	wire.Build(thirdProvider,
+		//dao.NewGORMArticleDAO,
+		service.NewArticleService,
+		web.NewArticleHandler,
+		//repository.NewArticleRepository,
+	)
+	return &web.ArticleHandler{}
+}
+
+func InitUserSvc() service.UserService {
+	wire.Build(thirdProvider, userSvcProvider)
+	return service.NewUserService(nil)
+}
+
+func InitJwtHdl() ijwt.Handler {
+	wire.Build(thirdProvider, ijwt.NewRedisJWTHandler)
+	return ijwt.NewRedisJWTHandler(nil)
 }

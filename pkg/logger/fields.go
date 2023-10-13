@@ -10,3 +10,9 @@ func String(key, val string) Field {
 		Value: val,
 	}
 }
+func Error(val error) Field {
+	return Field{
+		Key:   "error",
+		Value: val,
+	}
+}

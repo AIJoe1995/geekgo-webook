@@ -15,6 +15,7 @@ import (
 	"geekgo-webook/internal/web/jwt"
 	"geekgo-webook/ioc"
 	"github.com/gin-gonic/gin"
+	"github.com/google/wire"
 )
 
 // Injectors from wire.go:
@@ -36,6 +37,39 @@ func InitWebServer() *gin.Engine {
 	wechatService := InitPhantomWechatService()
 	wechatHandlerConfig := NewWechatHandlerConfig()
 	oAuth2WechatHandler := web.NewOAuth2WechatHandler(wechatService, userService, handler, wechatHandlerConfig)
-	engine := ioc.InitWebServer(v, userHandler, oAuth2WechatHandler)
+	articleService := service.NewArticleService()
+	loggerV1 := InitLog()
+	articleHandler := web.NewArticleHandler(articleService, loggerV1)
+	engine := ioc.InitWebServer(v, userHandler, oAuth2WechatHandler, articleHandler)
 	return engine
 }
+
+// 提供InitArticleHandler 简单的依赖注入， 方便测试article
+func InitArticleHandler() *web.ArticleHandler {
+	articleService := service.NewArticleService()
+	loggerV1 := InitLog()
+	articleHandler := web.NewArticleHandler(articleService, loggerV1)
+	return articleHandler
+}
+
+func InitUserSvc() service.UserService {
+	gormDB := InitTestDB()
+	userDAO := dao.NewUserDAO(gormDB)
+	cmdable := InitRedis()
+	userCache := cache.NewUserCache(cmdable)
+	userRepository := repository.NewUserRepository(userDAO, userCache)
+	userService := service.NewUserService(userRepository)
+	return userService
+}
+
+func InitJwtHdl() jwt.Handler {
+	cmdable := InitRedis()
+	handler := jwt.NewRedisJWTHandler(cmdable)
+	return handler
+}
+
+// wire.go:
+
+var thirdProvider = wire.NewSet(InitRedis, InitTestDB, InitLog)
+
+var userSvcProvider = wire.NewSet(dao.NewUserDAO, cache.NewUserCache, repository.NewUserRepository, service.NewUserService)
