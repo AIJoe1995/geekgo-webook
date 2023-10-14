@@ -22,7 +22,7 @@ import (
 func InitWebServer() *gin.Engine {
 	cmdable := ioc.InitRedis()
 	handler := jwt.NewRedisJWTHandler(cmdable)
-	v := ioc.InitGinMiddlewares(cmdable, handler)
+	v := ioc.InitMiddlewares(cmdable, handler)
 	db := ioc.InitDB()
 	userDAO := dao.NewUserDAO(db)
 	userCache := cache.NewUserCache(cmdable)
